@@ -1,0 +1,22 @@
+<!doctype html><html lang="hu"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MIME audit</title><style>body{font:16px system-ui;background:#f4eee7;color:#302c29;max-width:650px;margin:30px auto;padding:16px}button{padding:14px;background:#71543a;color:white;border:0;border-radius:10px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:white;padding:16px;border-radius:12px}</style><h1>279/I6.4bp – MIME audit</h1><p>Kizárólag Teszt Péter meglévő Safari-munkamenetével. Egy ideiglenes PNG objektumot tölt fel .jpg útvonalra.</p><button id="run">Teszt indítása (egyszer)</button><pre id="out">Várakozás</pre><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script><script>
+const out=document.getElementById('out'),btn=document.getElementById('run');
+const log=x=>out.textContent+='\n'+x;
+btn.onclick=async()=>{btn.disabled=true;out.textContent='Indítás';try{
+const cfg=JSON.parse(localStorage.getItem('thediamondsAuthConfig')||'null');
+if(!cfg||!cfg.key||!/^https:\/\/xfxrextgkdpluvnzdnrc\.supabase\.co\/?$/.test(cfg.url))throw Error('Hiányzó vagy eltérő projektkonfiguráció. Nyisd meg a főoldalt Safariban.');
+const c=supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:true,autoRefreshToken:false,detectSessionInUrl:false}});
+const {data,error}=await c.auth.getUser();if(error||data.user?.id!=='390ba8c7-b1d6-45e9-a1ba-c5b5b7188b94')throw Error('Teszt Péter fiókja szükséges.');
+const ticket='cac43206-beff-447e-90b8-a41a229e7075';
+const path=ticket+'/27900000-0000-4000-8000-000000000093.jpg';
+const bytes=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAGUlEQVR4nGO8c+kwAymAiSTVoxpGNQwpDQCpwAKRNdursgAAAABJRU5ErkJggg=='),x=>x.charCodeAt(0));
+const blob=new Blob([bytes],{type:'image/png'});
+log('Felhasználó: Teszt Péter');log('Útvonal: '+path);log('Méret: '+blob.size);
+const u=await c.storage.from('ticket-files').upload(path,blob,{contentType:'image/png',upsert:false});
+if(u.error){log('Storage elutasítás: '+u.error.message);log('Trigger MIME teszt nem igazolt.');return;}
+log('Storage feltöltés: sikeres');
+const r=await c.from('ticket_attachments').insert({ticket_id:ticket,uploaded_by:data.user.id,file_path:path,file_name:'mime-audit-test.jpg',file_size:blob.size});
+log('INSERT: '+(r.error?r.error.code+' '+r.error.message:'UNEXPECTEDLY ALLOWED'));
+log(r.error?.code==='P0001'&&r.error.message==='Érvénytelen csatolmánytípus.'?'PASS – trigger elutasította':'Nem igazolt / ellenőrizendő');
+log('Az ideiglenes objektumot később admin Storage felületen töröljük.');
+}catch(e){log('Hiba: '+e.message);}};
+</script></html>
